@@ -1,33 +1,4 @@
-# => It`s ugly, I know!
-# => P.S. Yes I`ve heard about polymorphism! :D
-module ParseArguments
-  def argument?(arg)
-    arg if !(option? arg) && !(option_with_parameter? arg)
-  end
-
-  def option?(arg)
-    arg.chars.take(1) == ['-'] && arg.length == 2 || \
-    arg.chars.take(2) == ['-', '-'] && !(arg.chars.include? '=')
-  end
-
-  def option_with_parameter?(arg)
-    arg.chars.take(1) == ['-'] && arg.length > 2 || \
-    arg.chars.take(2) == ['-', '-'] && (arg.chars.include? '=')
-  end
-
-  def get_arguments(argv)
-    argv.select { |arg| argument? arg }
-  end
-
-  def get_options(argv)
-    argv.select { |arg| option? arg }
-  end
-
-  def get_options_with_parameter(argv)
-    argv.select { |arg| option_with_parameter? arg }
-  end
-end
-
+# 1. Use Duck Typing!
 class Argument
   attr_accessor :name, :block
   def initialize(name, block)
@@ -35,12 +6,12 @@ class Argument
     @block = block
   end
 
-  def parse(command_runner, arg)
+  def parse(command_runner, arg, _)
     @block.call command_runner, arg
   end
 
-  def attributes
-    {name: name}
+  def help
+    "[#{@name}]"
   end
 end
 
@@ -53,22 +24,18 @@ class Option
     @block      = block
   end
 
-  def exists?(options)
-    options.one? do |option|
-      option.include? ("-#{short_name}" || "--#{full_name}")
-    end
+  def exists?(arguments)
+    option = /(^-#{@short_name}$|^--#{@full_name}$)/
+    arguments.one? { |argument| option.match(argument) }
   end
 
-  def attributes
-    {
-      short_name: short_name,
-      full_name:  full_name,
-      help:       help
-    }
+  def parse(command_runner, _, argv)
+    @block.call command_runner, exists?(argv)
   end
 
-  def parse(command_runner, _)
-    @block.call command_runner, true
+  def help
+    four_spaces = ' ' * 4
+    four_spaces + "-#{@short_name}, --#{@full_name} #{@help}"
   end
 end
 
@@ -82,18 +49,25 @@ class OptionWithParameter
     @block       = block
   end
 
-  def attributes
-    {
-      short_name:  short_name,
-      full_name:   full_name,
-      help:        help,
-      placeholder: placeholder,
-    }
+  def exists?(arguments)
+    option = /(^-#{@short_name}.+$|^--#{@full_name}=.+$)/
+    arguments.one? { |argument| option.match(argument) }
+  end
+
+  def parse(command_runner, arg, argv)
+    /((?<==).+|(?<=^-#{short_name}).+)/.match arg do |match|
+      argument = match[0]
+      @block.call command_runner, argument
+    end if exists? argv
+  end
+
+  def help
+    four_spaces = ' ' * 4
+    four_spaces + "-#{@short_name}, --#{@full_name}=#{@placeholder} #{@help}"
   end
 end
 
 class CommandParser
-  include ParseArguments
   def initialize(command_name)
     @command_name = command_name
     @arguments    = []
@@ -113,49 +87,29 @@ class CommandParser
   end
 
   def parse(command_runner, argv)
-    arguments =  get_arguments(argv)
-    options   =  get_options(argv)
-    @arguments.each.zip(arguments) do |element, arg|
-      element.parse(command_runner, arg) if element.instance_of? Argument
-    end
-    @arguments.each.zip(options) do |option, arg|
-      if option.instance_of?(Option) && option.exists?(options)
-        option.parse(command_runner, arg)
-      end
+    @arguments.each.zip(argv) do |argument, arg|
+      argument.parse(command_runner, arg, argv)
     end
   end
 
   def help
-    a = argument_attributes
-    b = option_attributes
-    c = option_with_parameters_attributes
-    header = "Usage: #{@command_name} [#{a[:name]}]\n"
-    body = "\    -#{b[:short_name]}, --#{b[:full_name]} #{b[:help]}\n"
-    footer = "\    -#{c[:short_name]}, --#{c[:full_name]}"\
-    +"=#{c[:placeholder]} #{c[:help]}\n"
-    header + body + footer
+    help_message = "Usage: #{@command_name}"
+    arguments_help(help_message)
+    options_help(help_message)
+    help_message
   end
 
-  private
-
-  def argument_attributes
-    dict = {}
-    @arguments.select { |element| element.instance_of? Argument }
-              .each { |arg| dict = arg.attributes }
-    dict
+  def arguments_help(help_message)
+    arguments = @arguments.select { |argument| argument.instance_of? Argument }
+    arguments.each do |argument|
+      help_message << " " << argument.help
+    end
   end
 
-  def option_attributes
-    dict = {}
-    @arguments.select { |element| element.instance_of? Option }
-              .each { |opt| dict = opt.attributes }
-    dict
-  end
-
-  def option_with_parameters_attributes
-    dict = {}
-    @arguments.select { |element| element.instance_of? OptionWithParameter }
-              .each { |opt| dict = opt.attributes }
-    dict
+  def options_help(help_message)
+    options = @arguments.reject { |argument| argument.instance_of? Argument }
+    options.each do |option|
+      help_message << "\n" << option.help
+    end
   end
 end
