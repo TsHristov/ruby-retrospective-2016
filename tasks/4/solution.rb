@@ -10,6 +10,11 @@ RSpec.describe 'Version' do
   let(:version_obj) { Version }
 
   describe '.new' do
+    context 'when no arguments are given' do
+      it 'raises' do
+        expect { Version.new }.not_to raise_error
+      end
+    end
     context 'when string is passed' do
       it 'raises ArgumentError for invalid input' do
         expect { version('1.') }
@@ -59,6 +64,7 @@ RSpec.describe 'Version' do
       expect(version('1.2.3')).to be > version('')
       expect(version('1.1')).to be > version('1')
       expect(version('1.0.1')).to be > version('1.0.0')
+      expect(version('1.0.0')).to_not be > version('1.0.1')
     end
 
     it 'compares using <' do
@@ -78,6 +84,7 @@ RSpec.describe 'Version' do
       expect(version('1')).to be <= version('1')
       expect(version('1.2')).to be <= version('1.3')
       expect(version('')).to be <= version('0')
+      expect(version('1.0.1')).to_not be <= version('1.0.0')
     end
   end
 
@@ -120,12 +127,9 @@ RSpec.describe 'Version' do
     end
 
     it 'doesn`t modify the instance' do
-      instance = version('1.2.3')
-      expect { instance.components }.to_not change { instance }
-      expect { instance.components(1) }.to_not change { instance }
-      expect { instance.components(2) }.to_not change { instance }
-      expect { instance.components(3) }.to_not change { instance }
-      expect { instance.components(4) }.to_not change { instance }
+      obj = version('1.2.3')
+      obj.components << 4
+      expect(obj).to eq version('1.2.3')
     end
   end
 
