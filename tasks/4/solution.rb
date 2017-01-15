@@ -11,10 +11,11 @@ RSpec.describe 'Version' do
 
   describe '.new' do
     context 'when no arguments are given' do
-      it 'raises' do
+      it 'does not raise error if no arguments are given' do
         expect { Version.new }.not_to raise_error
       end
     end
+
     context 'when string is passed' do
       it 'raises ArgumentError for invalid input' do
         expect { version('1.') }
@@ -127,9 +128,9 @@ RSpec.describe 'Version' do
     end
 
     it 'doesn`t modify the instance' do
-      obj = version('1.2.3')
-      obj.components << 4
-      expect(obj).to eq version('1.2.3')
+      instance = version('1.2.3')
+      instance.components.push 4
+      expect(instance).to eq version('1.2.3')
     end
   end
 

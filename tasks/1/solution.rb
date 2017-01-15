@@ -5,7 +5,7 @@ def temperature_units_conversion_formulas(temperature, units_conversion)
     ['K', 'F'] => (temperature * 9 / 5.to_f) - 459.67,
     ['K', 'C'] =>  temperature - 273.15,
     ['F', 'C'] => (temperature - 32) * 5 / 9.to_f,
-    ['F', 'K'] => (temperature + 459.67) * 5 / 9.to_f, 
+    ['F', 'K'] => (temperature + 459.67) * 5 / 9.to_f,
   }
   conversion_formulas.fetch(units_conversion) if conversion_formulas.key? units_conversion
 end
@@ -31,7 +31,7 @@ def substance_state_temperature(substance, desired_state, resulting_unit)
   }
   substance_states = substance_temperatures.fetch(substance.to_sym)
   substance_temperature = substance_states.fetch(desired_state.to_sym)
- convert_between_temperature_units(substance_temperature, 'C', resulting_unit)
+  convert_between_temperature_units(substance_temperature, 'C', resulting_unit)
 end
 
 def melting_point_of_substance(substance, resulting_unit)
